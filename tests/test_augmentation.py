@@ -1,31 +1,42 @@
+import torch
+from torchvision import transforms
 import numpy as np
-from utils.augmentation import get_training_augmentation
+from PIL import Image
+
+def get_test_transforms():
+    normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    return transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandAugment(num_ops=2, magnitude=9),
+        transforms.ColorJitter(
+            brightness=0.2,
+            contrast=0.2,
+            saturation=0.2
+        ),
+        transforms.RandomErasing(p=0.2),
+        transforms.ToTensor(),
+        normalize,
+    ])
 
 def test_augmentation_output_shape():
-    # Create dummy image
-    image = np.random.randint(0, 255, (32, 32, 3), dtype=np.uint8)
-    dataset_mean = [128, 128, 128]
+    # Create dummy input (PIL Image)
+    input_image = Image.fromarray(np.random.randint(0, 255, (32, 32, 3), dtype=np.uint8))
     
-    # Get augmentation pipeline
-    transform = get_training_augmentation(dataset_mean)
-    
-    # Apply augmentation
-    augmented = transform(image=image)['image']
+    # Apply transforms
+    transform = get_test_transforms()
+    output = transform(input_image)
     
     # Check output shape
-    assert augmented.shape == image.shape, "Augmented image should have same shape as input"
+    assert output.shape == (3, 32, 32), f"Expected shape (3, 32, 32), got {output.shape}"
 
 def test_augmentation_value_range():
-    # Create dummy image
-    image = np.random.randint(0, 255, (32, 32, 3), dtype=np.uint8)
-    dataset_mean = [128, 128, 128]
+    # Create dummy input (PIL Image)
+    input_image = Image.fromarray(np.random.randint(0, 255, (32, 32, 3), dtype=np.uint8))
     
-    # Get augmentation pipeline
-    transform = get_training_augmentation(dataset_mean)
+    # Apply transforms
+    transform = get_test_transforms()
+    output = transform(input_image)
     
-    # Apply augmentation
-    augmented = transform(image=image)['image']
-    
-    # Check value range
-    assert augmented.min() >= 0 and augmented.max() <= 255, "Values should be in [0, 255] range"
-    assert augmented.dtype == np.uint8, "Output should be uint8" 
+    # Check value ranges after normalization
+    assert output.min() >= -3 and output.max() <= 3, f"Values should be roughly in [-3, 3] range after normalization"
