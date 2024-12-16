@@ -65,8 +65,8 @@ def main():
             contrast=0.2,
             saturation=0.2
         ),
-        transforms.RandomErasing(p=0.2),
         transforms.ToTensor(),
+        transforms.RandomErasing(p=0.2),
         normalize,
     ])
     
