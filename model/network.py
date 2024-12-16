@@ -32,27 +32,28 @@ class CustomNet(nn.Module):
     def __init__(self, num_classes=10):
         super().__init__()
         
+        # Reduced initial channels
         # C1: Regular strided conv
-        self.c1 = nn.Conv2d(3, 32, kernel_size=3, stride=2, padding=1)
-        self.bn1 = nn.BatchNorm2d(32)
+        self.c1 = nn.Conv2d(3, 16, kernel_size=3, stride=2, padding=1)
+        self.bn1 = nn.BatchNorm2d(16)
         
         # C2: Depthwise Separable Conv with stride
-        self.c2 = DepthwiseSeparableConv(32, 64, stride=2)
-        self.bn2 = nn.BatchNorm2d(64)
+        self.c2 = DepthwiseSeparableConv(16, 32, stride=2)
+        self.bn2 = nn.BatchNorm2d(32)
         
         # C3: Dilated Conv
-        self.c3 = DilatedConv(64, 128)
-        self.bn3 = nn.BatchNorm2d(128)
+        self.c3 = DilatedConv(32, 64)
+        self.bn3 = nn.BatchNorm2d(64)
         
         # C4: Regular conv with stride
-        self.c4 = nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1)
-        self.bn4 = nn.BatchNorm2d(256)
+        self.c4 = nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1)
+        self.bn4 = nn.BatchNorm2d(128)
         
         # Global Average Pooling
         self.gap = nn.AdaptiveAvgPool2d(1)
         
         # Final FC layer
-        self.fc = nn.Linear(256, num_classes)
+        self.fc = nn.Linear(128, num_classes)
         
         self.relu = nn.ReLU()
         
@@ -66,4 +67,4 @@ class CustomNet(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         
-        return x 
+        return x

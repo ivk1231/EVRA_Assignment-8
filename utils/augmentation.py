@@ -14,12 +14,14 @@ def get_training_augmentation(dataset_mean):
         ),
         CoarseDropout(
             max_holes=1,
-            max_height=16,
-            max_width=1,
             min_holes=1,
+            hole_size_range=(16, 16),
             min_height=16,
+            max_height=16,
             min_width=16,
+            max_width=16,
             fill_value=dataset_mean,
+            mask_fill_value=None,
             p=0.5
         )
     ]) 
