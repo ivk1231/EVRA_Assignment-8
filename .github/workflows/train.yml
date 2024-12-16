@@ -1,7 +1,8 @@
 name: Train Model
 
 on:
-  workflow_dispatch:  # Manual trigger
+  push:
+    branches: [ main, master ]  # Run on push to main/master
 
 jobs:
   train:
