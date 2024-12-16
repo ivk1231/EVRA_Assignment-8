@@ -4,7 +4,6 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from model.network import CustomNet
-from utils.augmentation import get_training_augmentation
 import numpy as np
 from torch.optim.lr_scheduler import OneCycleLR
 
@@ -56,10 +55,17 @@ def main():
     # Data normalization
     normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
     
-    # Training transforms with augmentation
+    # Enhanced training transforms
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
+        transforms.RandAugment(num_ops=2, magnitude=9),
+        transforms.ColorJitter(
+            brightness=0.2,
+            contrast=0.2,
+            saturation=0.2
+        ),
+        transforms.RandomErasing(p=0.2),
         transforms.ToTensor(),
         normalize,
     ])
