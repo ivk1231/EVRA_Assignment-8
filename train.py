@@ -56,6 +56,7 @@ def main():
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2),
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
@@ -65,30 +66,34 @@ def main():
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
     
-    # CIFAR10 Dataset
+    # CIFAR10 Dataset with larger batch size
     trainset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
-    train_loader = DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
+    train_loader = DataLoader(trainset, batch_size=256, shuffle=True, num_workers=2, pin_memory=True)
     
     valset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_val)
-    val_loader = DataLoader(valset, batch_size=128, shuffle=False, num_workers=2)
+    val_loader = DataLoader(valset, batch_size=256, shuffle=False, num_workers=2, pin_memory=True)
     
     # Model
     model = CustomNet().to(device)
     
-    # Loss and optimizer
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
+    # Loss with label smoothing
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    
+    # SGD with momentum and weight decay
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+    
+    # Cosine annealing scheduler
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
     
     # Training loop
-    epochs = 100
+    epochs = 200  # Increased epochs
     best_acc = 0
     
     for epoch in range(epochs):
         train_loss, train_acc = train(model, train_loader, criterion, optimizer, device)
         val_loss, val_acc = validate(model, val_loader, criterion, device)
         
-        scheduler.step(val_loss)
+        scheduler.step()
         
         print(f'Epoch: {epoch+1}/{epochs}')
         print(f'Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}%')
