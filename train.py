@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from model.network import CustomNet
 from utils.augmentation import get_training_augmentation
+import numpy as np
 
 def train(model, train_loader, criterion, optimizer, device):
     model.train()
@@ -51,6 +52,26 @@ def validate(model, val_loader, criterion, device):
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
+    # Data loading and preprocessing
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+    
+    transform_val = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+    
+    # CIFAR10 Dataset
+    trainset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
+    train_loader = DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
+    
+    valset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_val)
+    val_loader = DataLoader(valset, batch_size=128, shuffle=False, num_workers=2)
+    
     # Model
     model = CustomNet().to(device)
     
@@ -58,9 +79,6 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
-    
-    # Dataset and DataLoader setup here
-    # ... (Add your dataset specific code)
     
     # Training loop
     epochs = 100
@@ -79,6 +97,7 @@ def main():
         if val_acc > best_acc:
             best_acc = val_acc
             torch.save(model.state_dict(), 'best_model.pth')
+            print(f'New best accuracy: {best_acc:.2f}%')
 
 if __name__ == '__main__':
     main() 
