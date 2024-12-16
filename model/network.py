@@ -58,22 +58,22 @@ class CustomNet(nn.Module):
     def __init__(self, num_classes=10):
         super().__init__()
         
-        # C1: Regular strided conv with more channels
-        self.c1 = nn.Conv2d(3, 24, kernel_size=3, stride=2, padding=1)
-        self.bn1 = nn.BatchNorm2d(24)
-        self.res1 = ResidualBlock(24)
+        # C1: Regular strided conv with reduced channels
+        self.c1 = nn.Conv2d(3, 16, kernel_size=3, stride=2, padding=1)
+        self.bn1 = nn.BatchNorm2d(16)
+        self.res1 = ResidualBlock(16)
         
         # C2: Depthwise Separable Conv with stride
-        self.c2 = DepthwiseSeparableConv(24, 48, stride=2)
-        self.res2 = ResidualBlock(48)
+        self.c2 = DepthwiseSeparableConv(16, 32, stride=2)
+        self.res2 = ResidualBlock(32)
         
         # C3: Dilated Conv
-        self.c3 = DilatedConv(48, 96)
-        self.res3 = ResidualBlock(96)
+        self.c3 = DilatedConv(32, 64)
+        self.res3 = ResidualBlock(64)
         
         # C4: Regular conv with stride
-        self.c4 = nn.Conv2d(96, 192, kernel_size=3, stride=2, padding=1)
-        self.bn4 = nn.BatchNorm2d(192)
+        self.c4 = nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1)
+        self.bn4 = nn.BatchNorm2d(128)
         
         # Global Average Pooling
         self.gap = nn.AdaptiveAvgPool2d(1)
@@ -81,8 +81,8 @@ class CustomNet(nn.Module):
         # Dropout for regularization
         self.dropout = nn.Dropout(0.2)
         
-        # Final FC layer with more capacity
-        self.fc = nn.Linear(192, num_classes)
+        # Final FC layer
+        self.fc = nn.Linear(128, num_classes)
         
         self.relu = nn.ReLU()
         
