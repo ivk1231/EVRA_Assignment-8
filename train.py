@@ -4,6 +4,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from model.network import CustomNet
+from utils.augmentation import get_training_augmentation
 import numpy as np
 from torch.optim.lr_scheduler import OneCycleLR
 
@@ -49,40 +50,24 @@ def validate(model, val_loader, criterion, device):
     
     return running_loss / len(val_loader), 100. * correct / total
 
-def mixup_data(x, y, alpha=0.2):
-    '''Returns mixed inputs, pairs of targets, and lambda'''
-    if alpha > 0:
-        lam = np.random.beta(alpha, alpha)
-    else:
-        lam = 1
-
-    batch_size = x.size()[0]
-    index = torch.randperm(batch_size).to(x.device)
-
-    mixed_x = lam * x + (1 - lam) * x[index, :]
-    y_a, y_b = y, y[index]
-    return mixed_x, y_a, y_b, lam
-
-def mixup_criterion(criterion, pred, y_a, y_b, lam):
-    return lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)
-
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    # Enhanced data augmentation
+    # Data normalization
+    normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    
+    # Training transforms with augmentation
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
-        transforms.RandAugment(num_ops=2, magnitude=9),  # Added RandAugment
-        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
         transforms.ToTensor(),
-        transforms.RandomErasing(p=0.2),  # Added random erasing
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        normalize,
     ])
     
+    # Validation transforms
     transform_val = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        normalize,
     ])
     
     # CIFAR10 Dataset
@@ -122,37 +107,10 @@ def main():
     for epoch in range(epochs):
         print(f'Epoch: {epoch+1}/{epochs}')
         
-        # Training with mixup
-        model.train()
-        train_loss = 0
-        correct = 0
-        total = 0
-        
-        for inputs, targets in train_loader:
-            inputs, targets = inputs.to(device), targets.to(device)
-            
-            # Apply mixup
-            inputs, targets_a, targets_b, lam = mixup_data(inputs, targets)
-            
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            
-            loss = mixup_criterion(criterion, outputs, targets_a, targets_b, lam)
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
-            
-            train_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += targets.size(0)
-            correct += (lam * predicted.eq(targets_a).sum().float()
-                       + (1 - lam) * predicted.eq(targets_b).sum().float())
-        
-        train_acc = 100. * correct / total
-        train_loss = train_loss / len(train_loader)
-        
-        # Validation
+        train_loss, train_acc = train(model, train_loader, criterion, optimizer, device)
         val_loss, val_acc = validate(model, val_loader, criterion, device)
+        
+        scheduler.step()
         
         print(f'Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}%')
         print(f'Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}%')
